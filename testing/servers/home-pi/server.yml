@@ -1,0 +1,14 @@
+version: "0.1"
+
+directories:
+  - ${DATA_PATH}
+  - ${CONFIG_PATH}
+
+setup:
+  - >
+    docker network inspect proxy-net >/dev/null 2>&1 ||
+    docker network create --driver bridge proxy-net
+
+secrets:
+  source: "local"
+  publicKey: "xvm49vDf9bq6RsjtCJj4r0XlvmSY9I6zRJQVPx-PH3A"

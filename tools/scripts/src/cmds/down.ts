@@ -1,0 +1,56 @@
+import * as yargs from "yargs";
+import { destroyApp } from "./appUtil.js";
+import { ConfigError } from "$root/config.js";
+import { logger } from "$root/logger.js";
+import { Env } from "envUtil.js";
+import { getConfigContextFromPath } from "./configUtil.js";
+
+export const DownCommand: yargs.CommandModule<
+  Record<string, string>,
+  { path: string; "dry-run": boolean }
+> = {
+  command: "down",
+  describe: "Bring down the server.",
+  builder: (y) => {
+    return y.options({
+      path: {
+        type: "string",
+        describe: "Path of the server configuration directory.",
+        default: ".",
+      },
+      "dry-run": {
+        type: "boolean",
+        describe: "Dry run.",
+        default: false,
+      },
+      "ignore-sys-env": {
+        type: "boolean",
+        describe: "Ignore system environments.",
+        default: false,
+      },
+    });
+  },
+  handler: async (args) => {
+    logger.debug(`Down ${args.path}`);
+
+    try {
+      const baseEnv: Env = args["ignore-sys-env"] ? {} : process.env;
+      const cfg = await getConfigContextFromPath(args.path, baseEnv);
+      const dryRun = args["dry-run"];
+
+      for (const app of cfg.apps) {
+        await destroyApp(app, cfg.server, {
+          dryRun,
+          serverPath: args.path,
+          baseEnv,
+        });
+      }
+    } catch (err) {
+      if (err instanceof ConfigError) {
+        console.log(err.message);
+      }
+      console.log(err);
+      process.exit(1);
+    }
+  },
+};

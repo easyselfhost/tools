@@ -1,0 +1,19 @@
+version: '3'
+
+networks:
+  proxy-net:
+    external: true
+
+services:
+  caddy:
+    image: 'caddy:2.5.2'
+    container_name: 'caddy'
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ${CONFIG_PATH}/caddy:/etc/caddy:ro
+    networks:
+      - proxy-net

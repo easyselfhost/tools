@@ -1,0 +1,14 @@
+{
+	"image": "mcr.microsoft.com/devcontainers/typescript-node:0-18",
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"dbaeumer.vscode-eslint",
+				"esbenp.prettier-vscode"
+			]
+		}
+	},
+	"features": {
+		"ghcr.io/devcontainers/features/docker-in-docker:2": {}
+	}
+}

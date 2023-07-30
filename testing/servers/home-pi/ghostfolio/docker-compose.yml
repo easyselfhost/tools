@@ -1,0 +1,43 @@
+version: '3'
+
+networks:
+  proxy-net:
+    external: true
+
+services:
+  ghostfolio:
+    image: 'ghostfolio/ghostfolio:1.283.4'
+    container_name: 'ghostfolio'
+    restart: unless-stopped
+    env_file:
+      - ./app.env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@gf-postgres:5432/${POSTGRES_DB}?sslmode=prefer
+      NODE_ENV: production
+      REDIS_HOST: 'gf-redis'
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      ACCESS_TOKEN_SALT: ${ACCESS_TOKEN_SALT}
+    networks:
+      - default
+      - proxy-net
+
+  gf-redis:
+    image: 'redis:alpine'
+    container_name: 'gf-redis'
+    restart: unless-stopped
+    env_file:
+      - ./app.env
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+
+  gf-postgres:
+    image: 'postgres:12'
+    container_name: 'gf-postgres'
+    restart: unless-stopped
+    volumes:
+      - ${DATA_PATH}/pgdb/db:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}

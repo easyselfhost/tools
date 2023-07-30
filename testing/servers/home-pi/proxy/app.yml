@@ -1,0 +1,3 @@
+files:
+  - from: ./Caddyfile
+    to: "${CONFIG_PATH}/caddy/Caddyfile"
