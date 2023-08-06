@@ -11,12 +11,13 @@ import {
   ConfigContext,
   ConfigError,
   SecretConfig,
+  SecretSourceConfig,
   ServerConfig,
   emptySecretConfig,
 } from "$root/config.js";
 import { getSecretClient } from "$root/secrets.js";
 
-async function fileExists(path: string): Promise<boolean> {
+export async function fileExists(path: string): Promise<boolean> {
   try {
     const stat = await fs.stat(path);
     return stat.isFile();
@@ -66,12 +67,26 @@ export async function getConfigContextFromPath(
   } catch (err) {
     throw handleConfigFileError(err, constants.SERVER_ENV_FILE_NAME);
   }
-
   logger.debug({ serverEnv: serverEnv });
+
+  let secretSourceConfig: SecretSourceConfig | undefined;
+  try {
+    const serverFile = path.join(filePath, constants.SERVER_CONFIG_FILE_NAME);
+
+    if (await fileExists(serverFile)) {
+      let serverStr = await fs.readFile(serverFile, "utf-8");
+      serverStr = applyEnvToString(serverStr, layeredEnv(serverEnv, baseEnv));
+      const server = yaml.load(serverStr) as ServerConfig;
+      secretSourceConfig = server.secrets;
+
+      logger.debug({ secretSourceConfig });
+    }
+  } catch (err) {
+    throw handleConfigFileError(err, constants.SERVER_CONFIG_FILE_NAME);
+  }
 
   let secret: SecretConfig = emptySecretConfig();
   let rawSecretsLoaded = false;
-
   try {
     const secretFile = path.join(filePath, constants.SECRET_CONFIG_FILE_NAME);
     if (await fileExists(secretFile)) {
@@ -92,6 +107,20 @@ export async function getConfigContextFromPath(
     throw handleConfigFileError(err, constants.SECRET_CONFIG_FILE_NAME);
   }
 
+  if (!rawSecretsLoaded && secretSourceConfig !== undefined) {
+    logger.debug("loading secrets from source.");
+    const secretClient = await getSecretClient(secretSourceConfig, filePath);
+    const secretStr = await secretClient.pull();
+    secret = yaml.load(secretStr) as SecretConfig;
+    if (secret.global === undefined) {
+      secret.global = {};
+    }
+
+    if (secret.apps === undefined) {
+      secret.apps = {};
+    }
+  }
+
   logger.debug({ secret: secret });
 
   let server: ServerConfig | undefined;
@@ -102,7 +131,7 @@ export async function getConfigContextFromPath(
       let serverStr = await fs.readFile(serverFile, "utf-8");
       serverStr = applyEnvToString(
         serverStr,
-        layeredEnv(secret.global, serverEnv)
+        layeredEnv(secret.server ?? {}, secret.global, serverEnv, baseEnv)
       );
       server = yaml.load(serverStr) as ServerConfig;
     }
@@ -112,28 +141,14 @@ export async function getConfigContextFromPath(
 
   logger.debug({ server: server ?? "emtpy" });
 
-  if (server?.secrets?.source !== undefined && !rawSecretsLoaded) {
-    const secretClient = getSecretClient(server.secrets, filePath);
-    const secretStr = await secretClient.pull();
-    secret = yaml.load(secretStr) as SecretConfig;
-
-    if (secret.global === undefined) {
-      secret.global = {};
-    }
-
-    if (secret.apps === undefined) {
-      secret.apps = {};
-    }
-
-    logger.debug("loaded secret from source");
-    logger.debug({ secret: secret });
-  }
-
   const apps: AppConfigContext[] = [];
 
   try {
     const files = await fs.readdir(filePath);
     for (const file of files) {
+      if (file.startsWith(".")) {
+        continue;
+      }
       if ((await fs.stat(file)).isDirectory()) {
         const dir = file;
         logger.debug(`enter app directory ${dir}`);
@@ -151,7 +166,7 @@ export async function getConfigContextFromPath(
             const envStr = await fs.readFile(envFile, "utf-8");
             appEnv = expandEnv(
               dotenv.parse(envStr),
-              layeredEnv(appSecret, secret.global, serverEnv)
+              layeredEnv(appSecret, secret.global, serverEnv, baseEnv)
             );
           }
         } catch (err) {
@@ -164,7 +179,7 @@ export async function getConfigContextFromPath(
             let appStr = await fs.readFile(appFile, "utf-8");
             appStr = applyEnvToString(
               appStr,
-              layeredEnv(appSecret, appEnv, secret.global, serverEnv)
+              layeredEnv(appSecret, appEnv, secret.global, serverEnv, baseEnv)
             );
             appConfig = yaml.load(appStr) as AppConfig;
           }

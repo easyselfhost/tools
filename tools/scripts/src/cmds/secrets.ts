@@ -8,7 +8,6 @@ import {
   InvalidSourceError,
   genKey,
   getSecretClient,
-  isKeyPair,
 } from "$root/secrets.js";
 import { getConfigContextFromPath } from "./configUtil.js";
 
@@ -41,8 +40,9 @@ const PushCommand: yargs.CommandModule<
   },
   handler: async (args) => {
     logger.debug(`Push secrets under ${args.path}`);
+    const baseEnv = process.env;
 
-    const config = await getConfigContextFromPath(args.path, {});
+    const config = await getConfigContextFromPath(args.path, baseEnv);
     const secrets = config.server.secrets;
     if (secrets === undefined) {
       console.log("No secrets in this server configuration directory.");
@@ -64,7 +64,7 @@ const PushCommand: yargs.CommandModule<
     }
 
     try {
-      const secretClient = getSecretClient(source, args.path);
+      const secretClient = await getSecretClient(source, args.path);
       await secretClient.push(secretStr);
     } catch (err) {
       handleSecretErrors(err);
@@ -79,7 +79,6 @@ const PullCommand: yargs.CommandModule<
     path: string;
     "dry-run": boolean;
     "print-secrets": boolean;
-    "key-file": string | undefined;
   }
 > = {
   command: "pull",
@@ -101,28 +100,17 @@ const PullCommand: yargs.CommandModule<
         describe: "Print pulled secrets instead of writing them to files.",
         default: false,
       },
-      "key-file": {
-        type: "string",
-        describe: "File that has public and private key in JSON format.",
-      },
     });
   },
   handler: async (args) => {
     logger.debug(`Pull secrets in ${args.path}`);
+    const baseEnv = process.env;
 
-    const config = await getConfigContextFromPath(args.path, {});
+    const config = await getConfigContextFromPath(args.path, baseEnv);
     const secrets = config.server.secrets;
     if (secrets === undefined) {
       console.log("No secrets in this server configuration directory.");
       process.exit(1);
-    }
-
-    if (args.keyFile !== undefined) {
-      const keyPairStr = await fs.readFile(args.keyFile, { encoding: "utf-8" });
-      const kp = JSON.parse(keyPairStr);
-      if (isKeyPair(kp)) {
-        process.env["PRIVATE_KEY"] = kp.privateKey;
-      }
     }
 
     const source = config.server.config?.secrets;
@@ -137,7 +125,7 @@ const PullCommand: yargs.CommandModule<
     }
 
     try {
-      const secretClient = getSecretClient(source, args.path);
+      const secretClient = await getSecretClient(source, args.path);
       const secrets = await secretClient.pull();
 
       if (args.printSecrets) {
