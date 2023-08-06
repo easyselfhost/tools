@@ -11,4 +11,6 @@ setup:
 
 secrets:
   source: "local"
-  publicKey: "xvm49vDf9bq6RsjtCJj4r0XlvmSY9I6zRJQVPx-PH3A"
+  keyFile:
+    - ./keypair.json
+    - $HOME/.config/esh-server/keypair.json
