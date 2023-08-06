@@ -3,6 +3,7 @@ import fs from "fs/promises";
 import { SecretSourceConfig } from "./config.js";
 import { SECRET_VAULT_FILE_NAME } from "./constants.js";
 import path from "path";
+import { fileExists } from "./cmds/configUtil.js";
 
 export class InvalidSourceError extends Error {
   constructor(message: string) {
@@ -93,24 +94,34 @@ export class LocalSecretClient extends SecretClient {
   }
 }
 
-export function getSecretClient(
+export async function getSecretClient(
   config: SecretSourceConfig,
   basePath: string
-): SecretClient {
+): Promise<SecretClient> {
   const source = config.source ?? "local";
 
   if (source === "local") {
-    const pubkey = config?.publicKey;
-    if (pubkey === undefined) {
+    let keyPair: KeyPair | undefined;
+
+    for (const file of config.keyFile ?? []) {
+      if (await fileExists(file)) {
+        const kpStr = await fs.readFile(file, { encoding: "utf-8" });
+        const kp = JSON.parse(kpStr);
+        if (isKeyPair(kp)) {
+          keyPair = kp;
+          break;
+        }
+      }
+    }
+
+    if (keyPair === undefined) {
       throw new InvalidActionError(
-        "Storing secrets locally requires a public key"
+        "Failed to load keys from keyFile paths (or they don't exist)."
       );
     }
-    const privkey = process.env["PRIVATE_KEY"];
-
     return new LocalSecretClient(path.join(basePath, SECRET_VAULT_FILE_NAME), {
-      pubkey,
-      privkey,
+      pubkey: keyPair.publicKey,
+      privkey: keyPair.privateKey,
     });
   }
 

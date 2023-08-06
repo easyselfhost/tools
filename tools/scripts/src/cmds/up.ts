@@ -18,7 +18,7 @@ async function dirExists(dir: string): Promise<boolean> {
 
 export const UpCommand: yargs.CommandModule<
   Record<string, string>,
-  { path: string; "dry-run": boolean }
+  { path: string; "dry-run": boolean; app: (string | number)[] }
 > = {
   command: "up",
   aliases: ["deploy"],
@@ -29,6 +29,12 @@ export const UpCommand: yargs.CommandModule<
         type: "string",
         describe: "Path of the server configuration directory.",
         default: ".",
+      },
+      app: {
+        type: "array",
+        alias: "apps",
+        describe: "Specific app(s) to deploy.",
+        default: [],
       },
       "dry-run": {
         type: "boolean",
@@ -97,6 +103,11 @@ export const UpCommand: yargs.CommandModule<
       }
 
       for (const app of cfg.apps) {
+        if (args.app.length > 0 && !args.app.includes(app.name)) {
+          logger.debug(`Skip ${app.name} as not specified.`);
+          continue;
+        }
+
         await deployApp(app, cfg.server, {
           dryRun,
           serverPath: args.path,

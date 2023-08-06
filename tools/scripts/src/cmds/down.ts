@@ -7,7 +7,7 @@ import { getConfigContextFromPath } from "./configUtil.js";
 
 export const DownCommand: yargs.CommandModule<
   Record<string, string>,
-  { path: string; "dry-run": boolean }
+  { path: string; "dry-run": boolean; app: (string | number)[] }
 > = {
   command: "down",
   describe: "Bring down the server.",
@@ -17,6 +17,12 @@ export const DownCommand: yargs.CommandModule<
         type: "string",
         describe: "Path of the server configuration directory.",
         default: ".",
+      },
+      app: {
+        type: "array",
+        alias: "apps",
+        describe: "Specific app(s) to bring down.",
+        default: [],
       },
       "dry-run": {
         type: "boolean",
@@ -39,6 +45,11 @@ export const DownCommand: yargs.CommandModule<
       const dryRun = args["dry-run"];
 
       for (const app of cfg.apps) {
+        if (args.app.length > 0 && !args.app.includes(app.name)) {
+          logger.debug(`Skip ${app.name} as not specified.`);
+          continue;
+        }
+
         await destroyApp(app, cfg.server, {
           dryRun,
           serverPath: args.path,

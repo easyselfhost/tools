@@ -7,11 +7,12 @@ type ServerDockerConfig = {
     description: string;
     docker: string;
   };
+  sudo?: boolean;
 };
 
 export type SecretSourceConfig = {
   source?: string;
-  publicKey?: string;
+  keyFile?: string[];
 };
 
 export type ServerConfig = {
@@ -25,6 +26,7 @@ export type ServerConfig = {
 export type SecretConfig = {
   apps: Record<string, Env | undefined>;
   global: Env;
+  server?: Env;
 };
 
 export function emptySecretConfig(): SecretConfig {
