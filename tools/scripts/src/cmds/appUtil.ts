@@ -35,12 +35,13 @@ export async function deployApp(
     });
   }
 
-  const prefix = server?.config?.docker?.sudo ?? false ? "sudo " : "";
-
-  await exec(`${prefix}docker compose up -d`, {
+  console.log(`Starting ${app.name}...`);
+  await exec("docker compose up -d".split(" "), {
     env: layeredEnv(appSecret, app.env, serverSecret, server.env, baseEnv),
     cwd: appPath,
     dryRun,
+    pipeStdout: true,
+    pipeStderr: true,
   });
 }
 
@@ -59,8 +60,7 @@ export async function destroyApp(
   const appSecret = server.secrets?.apps[app.name] ?? {};
   const serverSecret = server.secrets?.global ?? {};
 
-  const prefix = server?.config?.docker?.sudo ?? false ? "sudo " : "";
-  await exec(`${prefix}docker compose down`, {
+  await exec("docker compose down".split(" "), {
     env: layeredEnv(appSecret, app.env, serverSecret, server.env, baseEnv),
     cwd: appPath,
     dryRun,
