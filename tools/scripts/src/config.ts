@@ -1,13 +1,20 @@
 import * as constants from "./constants.js";
 import { Env } from "envUtil.js";
 
-type ServerDockerConfig = {
+export type DockerVolume = {
+  name?: string;
+  driver?: string;
+  options?: string[];
+};
+
+export type ServerDockerConfig = {
   context?: {
     name: string;
     description: string;
     docker: string;
   };
   sudo?: boolean;
+  volumes?: (DockerVolume | string)[];
 };
 
 export type SecretSourceConfig = {

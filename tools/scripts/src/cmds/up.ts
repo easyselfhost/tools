@@ -1,6 +1,6 @@
 import * as yargs from "yargs";
 import fs from "fs/promises";
-import { ConfigError } from "$root/config.js";
+import { ConfigError, DockerVolume } from "$root/config.js";
 import { logger } from "$root/logger.js";
 import { exec } from "$root/exec.js";
 import { Env, layeredEnv } from "envUtil.js";
@@ -65,7 +65,7 @@ export const UpCommand: yargs.CommandModule<
             dryRun,
           });
 
-          if (!(await dirExists(dir))) {
+          if (!dryRun && !(await dirExists(dir))) {
             console.log(`Failed to create ${dir}.`);
             process.exit(1);
           }
@@ -85,6 +85,42 @@ export const UpCommand: yargs.CommandModule<
               dryRun,
             });
             cfg.server.env["DOCKER_CONTEXT"] = ctx.name;
+          }
+
+          const volumes = docker.volumes;
+          if (volumes !== undefined) {
+            for (const volume of volumes) {
+              let v: DockerVolume = {};
+
+              if (typeof volume === "string") {
+                v = {
+                  name: volume,
+                };
+              } else {
+                v = volume;
+              }
+
+              const cmd = ["docker", "volume", "create"];
+
+              if (v.driver !== undefined) {
+                cmd.push("--driver", v.driver);
+              }
+
+              const opts = v.options;
+              if (opts !== undefined && opts.length > 0) {
+                for (const opt of opts) {
+                  cmd.push("--opt", opt);
+                }
+              }
+
+              cmd.push(v.name ?? "");
+
+              await exec(cmd.join(" "), {
+                env: layeredEnv(cfg.server.env, baseEnv),
+                cwd: args.path,
+                dryRun,
+              });
+            }
           }
         }
 
