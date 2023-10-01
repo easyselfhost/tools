@@ -14,3 +14,18 @@ secrets:
   keyFile:
     - ./keypair.json
     - $HOME/.config/esh-server/keypair.json
+
+docker:
+  volumes:
+    - local-volume-1
+    - local-volume-2
+    - name: local-volume-3
+    - name: volume-with-opts
+      options:
+        - type=nfs
+        - device=:/path/to/dir
+    - name: volume-with-driver
+      driver: fake
+      options:
+        - tardis=blue
+        - timey=wimey
