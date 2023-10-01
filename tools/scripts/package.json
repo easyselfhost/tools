@@ -1,6 +1,6 @@
 {
   "name": "esh-scripts",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Easy Self Host tool for easily deploying self-hosted apps.",
   "main": "dist/main.js",
   "type": "module",
