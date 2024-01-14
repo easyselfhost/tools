@@ -122,9 +122,24 @@ export const UpCommand: yargs.CommandModule<
               });
             }
           }
+
+          const networks = docker.networks;
+          if (networks !== undefined) {
+            for (const network of networks) {
+              const cmd =
+                `docker network inspect ${network} >/dev/null 2>&1 || ` +
+                `docker network create --driver bridge ${network}`;
+
+              await exec(cmd, {
+                env: layeredEnv(cfg.server.env, baseEnv),
+                cwd: args.path,
+                dryRun,
+              });
+            }
+          }
         }
 
-        for (const cmd of cfg.server.config.setup) {
+        for (const cmd of cfg.server.config.setup ?? []) {
           await exec(cmd, {
             env: layeredEnv(cfg.server.env, baseEnv),
             cwd: args.path,

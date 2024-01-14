@@ -4,11 +4,6 @@ directories:
   - ${DATA_PATH}
   - ${CONFIG_PATH}
 
-setup:
-  - >
-    docker network inspect proxy-net >/dev/null 2>&1 ||
-    docker network create --driver bridge proxy-net
-
 secrets:
   source: "local"
   keyFile:
@@ -16,16 +11,18 @@ secrets:
     - $HOME/.config/esh-server/keypair.json
 
 docker:
+  networks:
+    - proxy-net
   volumes:
     - local-volume-1
     - local-volume-2
-    - name: local-volume-3
-    - name: volume-with-opts
-      options:
-        - type=nfs
-        - device=:/path/to/dir
-    - name: volume-with-driver
-      driver: fake
-      options:
-        - tardis=blue
-        - timey=wimey
+    # - name: local-volume-3
+    # - name: volume-with-opts
+    #   options:
+    #     - type=nfs
+    #     - device=:/path/to/dir
+    # - name: volume-with-driver
+    #   driver: fake
+    #   options:
+    #     - tardis=blue
+    #     - timey=wimey
