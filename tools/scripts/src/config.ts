@@ -15,6 +15,7 @@ export type ServerDockerConfig = {
   };
   sudo?: boolean;
   volumes?: (DockerVolume | string)[];
+  networks?: string[];
 };
 
 export type SecretSourceConfig = {
@@ -23,8 +24,8 @@ export type SecretSourceConfig = {
 };
 
 export type ServerConfig = {
-  version: string;
-  setup: string[];
+  version?: string;
+  setup?: string[];
   secrets?: SecretSourceConfig;
   directories?: string[];
   docker?: ServerDockerConfig;
