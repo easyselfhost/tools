@@ -2,7 +2,7 @@ import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 import * as cmds from "./cmds/index.js";
 
-const version = "0.0.5";
+const version = "0.0.6";
 
 yargs(hideBin(process.argv))
   .command(cmds.CheckCommand)
