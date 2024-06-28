@@ -18,7 +18,12 @@ async function dirExists(dir: string): Promise<boolean> {
 
 export const UpCommand: yargs.CommandModule<
   Record<string, string>,
-  { path: string; "dry-run": boolean; app: (string | number)[] }
+  {
+    path: string;
+    "dry-run": boolean;
+    app: (string | number)[];
+    "compose-args": (string | number)[];
+  }
 > = {
   command: "up",
   aliases: ["deploy"],
@@ -45,6 +50,11 @@ export const UpCommand: yargs.CommandModule<
         type: "boolean",
         describe: "Ignore system environments.",
         default: false,
+      },
+      "compose-args": {
+        type: "array",
+        describe: "Additional docker compose arguments with format 'arg=value'",
+        default: [],
       },
     });
   },
@@ -163,6 +173,7 @@ export const UpCommand: yargs.CommandModule<
           dryRun,
           serverPath: args.path,
           baseEnv,
+          composeArgs: args["compose-args"].map((item) => item.toString()),
         });
       }
     } catch (err) {

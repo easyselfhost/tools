@@ -7,7 +7,12 @@ import { getConfigContextFromPath } from "./configUtil.js";
 
 export const DownCommand: yargs.CommandModule<
   Record<string, string>,
-  { path: string; "dry-run": boolean; app: (string | number)[] }
+  {
+    path: string;
+    "dry-run": boolean;
+    app: (string | number)[];
+    "compose-args": (string | number)[];
+  }
 > = {
   command: "down",
   describe: "Bring down the server.",
@@ -34,6 +39,11 @@ export const DownCommand: yargs.CommandModule<
         describe: "Ignore system environments.",
         default: false,
       },
+      "compose-args": {
+        type: "array",
+        describe: "Additional docker compose arguments with format 'arg=value'",
+        default: [],
+      },
     });
   },
   handler: async (args) => {
@@ -54,6 +64,7 @@ export const DownCommand: yargs.CommandModule<
           dryRun,
           serverPath: args.path,
           baseEnv,
+          composeArgs: args["compose-args"].map((item) => item.toString()),
         });
       }
     } catch (err) {

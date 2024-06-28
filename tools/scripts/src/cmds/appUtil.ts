@@ -4,6 +4,43 @@ import { exec } from "$root/exec.js";
 import { Env, layeredEnv } from "envUtil.js";
 import path from "path";
 
+function splitString(str: string) {
+  // Check for an empty string
+  if (str === "") {
+    return [];
+  }
+
+  // Find the index of the first occurrence of '='
+  const index = str.indexOf("=");
+
+  // If '=' is not found, return an array with the original string
+  if (index === -1) {
+    return [str];
+  }
+
+  // Split the string into two parts at the first '='
+  const key = str.substring(0, index);
+  const value = str.substring(index + 1);
+
+  // Return the result as an array
+  return [key, value];
+}
+
+function parseComposeArgs(composeArgs: string[]): string[] {
+  const moreArgs = [];
+  for (const arg of composeArgs) {
+    const values = splitString(arg);
+    if (values.length >= 1) {
+      const value = values[0];
+      moreArgs.push(value.length === 1 ? `-${value}` : `--${value}`);
+    }
+    if (values.length >= 2) {
+      moreArgs.push(values[1]);
+    }
+  }
+  return moreArgs;
+}
+
 export async function deployApp(
   app: AppConfigContext,
   server: ServerConfigContext,
@@ -11,7 +48,13 @@ export async function deployApp(
     dryRun,
     serverPath,
     baseEnv,
-  }: { dryRun: boolean; serverPath: string; baseEnv: Env }
+    composeArgs,
+  }: {
+    dryRun: boolean;
+    serverPath: string;
+    baseEnv: Env;
+    composeArgs?: string[];
+  }
 ) {
   logger.debug(`Deploying ${app.name}...`);
 
@@ -35,8 +78,10 @@ export async function deployApp(
     });
   }
 
+  const moreArgs = parseComposeArgs(composeArgs ?? []);
+
   console.log(`Starting ${app.name}...`);
-  await exec("docker compose up -d".split(" "), {
+  await exec(["docker", "compose", "up", "-d", ...moreArgs], {
     env: layeredEnv(appSecret, app.env, serverSecret, server.env, baseEnv),
     cwd: appPath,
     dryRun,
@@ -52,7 +97,13 @@ export async function destroyApp(
     dryRun,
     serverPath,
     baseEnv,
-  }: { dryRun: boolean; serverPath: string; baseEnv: Env }
+    composeArgs,
+  }: {
+    dryRun: boolean;
+    serverPath: string;
+    baseEnv: Env;
+    composeArgs?: string[];
+  }
 ) {
   logger.debug(`Destroying ${app.name}`);
 
@@ -60,7 +111,9 @@ export async function destroyApp(
   const appSecret = server.secrets?.apps[app.name] ?? {};
   const serverSecret = server.secrets?.global ?? {};
 
-  await exec("docker compose down".split(" "), {
+  const moreArgs = parseComposeArgs(composeArgs ?? []);
+
+  await exec(["docker", "compose", "down", ...moreArgs], {
     env: layeredEnv(appSecret, app.env, serverSecret, server.env, baseEnv),
     cwd: appPath,
     dryRun,
